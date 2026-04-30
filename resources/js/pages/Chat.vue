@@ -1,8 +1,57 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
+import { useEchoPublic } from '@laravel/echo-vue';
+import { Form, Head, Link, usePage } from '@inertiajs/vue3';
 import { MessageSquareText, Send, Users } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 import { chat, dashboard } from '@/routes';
 import messages from '@/routes/messages';
+
+type ChatMessage = {
+    id: number;
+    body: string;
+    created_at: string | null;
+    user: {
+        id: number;
+        name: string;
+    };
+};
+
+type ChatPageProps = {
+    messages: ChatMessage[];
+};
+
+type MessageSentPayload = {
+    message: ChatMessage;
+};
+
+const props = defineProps<ChatPageProps>();
+const page = usePage();
+const currentUserId = computed(() => page.props.auth.user?.id);
+const visibleMessages = ref<ChatMessage[]>([]);
+
+watch(
+    () => props.messages,
+    (messages) => {
+        visibleMessages.value = [...messages];
+    },
+    { immediate: true },
+);
+
+useEchoPublic<MessageSentPayload>('chat', 'MessageSent', (event) => {
+    console.log('chat: MessageSent received', event);
+    visibleMessages.value.push(event.message);
+});
+
+const formatTime = (value: string | null): string => {
+    if (!value) {
+        return '';
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date(value));
+};
 
 defineOptions({
     layout: {
@@ -119,34 +168,53 @@ defineOptions({
                         </span>
                     </div>
 
-                    <div class="flex flex-1 flex-col gap-3 p-4">
+                    <div
+                        class="flex flex-1 flex-col gap-4 overflow-y-auto p-4"
+                    >
+                        <template v-if="visibleMessages.length">
+                            <div
+                                v-for="message in visibleMessages"
+                                :key="message.id"
+                                class="w-fit max-w-[85%] rounded-2xl p-3 text-sm"
+                                :class="
+                                    message.user.id === currentUserId
+                                        ? 'ml-auto rounded-tr-sm bg-primary text-primary-foreground'
+                                        : 'rounded-tl-sm bg-sidebar-accent text-sidebar-accent-foreground'
+                                "
+                            >
+                                <div
+                                    class="flex items-center justify-between gap-3"
+                                >
+                                    <p class="font-medium">
+                                        {{
+                                            message.user.id === currentUserId
+                                                ? 'Tú'
+                                                : message.user.name
+                                        }}
+                                    </p>
+                                    <p
+                                        v-if="message.created_at"
+                                        class="text-[11px] opacity-70"
+                                    >
+                                        {{ formatTime(message.created_at) }}
+                                    </p>
+                                </div>
+                                <p class="mt-1 whitespace-pre-wrap leading-6">
+                                    {{ message.body }}
+                                </p>
+                            </div>
+                        </template>
+
                         <div
-                            class="max-w-[85%] rounded-2xl rounded-tl-sm bg-sidebar-accent p-3 text-sm text-sidebar-accent-foreground"
-                        >
-                            <p class="font-medium">Sistema</p>
-                            <p class="mt-1">
-                                Aquí mostraremos los mensajes que lleguen por
-                                Reverb.
-                            </p>
-                        </div>
-                        <div
-                            class="ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-primary p-3 text-sm text-primary-foreground"
-                        >
-                            <p class="font-medium">Tú</p>
-                            <p class="mt-1">
-                                Esta vista ya está lista para enchufar el chat.
-                            </p>
-                        </div>
-                        <div
-                            class="mt-auto rounded-xl border border-dashed border-sidebar-border/70 p-4 text-sm text-muted-foreground dark:border-sidebar-border"
+                            v-else
+                            class="rounded-xl border border-dashed border-sidebar-border/70 p-4 text-sm text-muted-foreground dark:border-sidebar-border"
                         >
                             <p class="font-medium text-foreground">
-                                Área de composición
+                                Aún no hay mensajes
                             </p>
                             <p class="mt-1">
-                                El formulario de abajo enviará mensajes al
-                                backend y luego Reverb los difundirá al resto
-                                de usuarios.
+                                Cuando llegue el primero por Reverb, aparecerá
+                                aquí.
                             </p>
                         </div>
                     </div>
