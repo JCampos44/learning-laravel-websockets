@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Form, Head, Link } from '@inertiajs/vue3';
 import { MessageSquareText, Send, Users } from 'lucide-vue-next';
-import { dashboard } from '@/routes';
+import { chat, dashboard } from '@/routes';
+import messages from '@/routes/messages';
 
 defineOptions({
     layout: {
         breadcrumbs: [
             {
                 title: 'Chat',
-                href: '/chat',
+                href: chat(),
             },
         ],
     },
@@ -23,10 +24,10 @@ defineOptions({
             class="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
         >
             <div
-                class="relative overflow-hidden rounded-2xl border border-sidebar-border/70 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-lg dark:border-sidebar-border"
+                class="relative overflow-hidden rounded-2xl border border-sidebar-border/70 bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-lg dark:border-sidebar-border"
             >
                 <div
-                    class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.22),_transparent_36%),radial-gradient(circle_at_bottom_left,_rgba(34,197,94,0.12),_transparent_32%)]"
+                    class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.22),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(34,197,94,0.12),transparent_32%)]"
                 />
 
                 <div class="relative flex h-full flex-col gap-6">
@@ -98,7 +99,7 @@ defineOptions({
                 </div>
             </div>
 
-            <div class="grid min-h-[32rem] gap-4">
+            <div class="grid min-h-128 gap-4">
                 <div
                     class="flex flex-col overflow-hidden rounded-2xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border"
                 >
@@ -136,16 +137,65 @@ defineOptions({
                                 Esta vista ya está lista para enchufar el chat.
                             </p>
                         </div>
-                        <div class="mt-auto rounded-xl border border-dashed border-sidebar-border/70 p-4 text-sm text-muted-foreground dark:border-sidebar-border">
+                        <div
+                            class="mt-auto rounded-xl border border-dashed border-sidebar-border/70 p-4 text-sm text-muted-foreground dark:border-sidebar-border"
+                        >
                             <p class="font-medium text-foreground">
                                 Área de composición
                             </p>
                             <p class="mt-1">
-                                Más adelante agregaremos el input y el botón de
-                                enviar.
+                                El formulario de abajo enviará mensajes al
+                                backend y luego Reverb los difundirá al resto
+                                de usuarios.
                             </p>
                         </div>
                     </div>
+
+                    <Form
+                        v-bind="messages.store.form()"
+                        reset-on-success
+                        class="border-t border-sidebar-border/70 p-4 dark:border-sidebar-border"
+                        #default="{ errors, processing, submit }"
+                    >
+                        <label for="body" class="sr-only">Mensaje</label>
+                        <textarea
+                            id="body"
+                            name="body"
+                            rows="3"
+                            maxlength="1000"
+                            required
+                            placeholder="Escribe un mensaje para toda la sala..."
+                            @keydown.enter.exact.prevent="() => submit()"
+                            class="min-h-28 w-full resize-none rounded-xl border border-sidebar-border/70 bg-background px-4 py-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-sidebar-border"
+                        ></textarea>
+
+                        <p
+                            v-if="errors.body"
+                            class="mt-2 text-sm text-red-600 dark:text-red-400"
+                        >
+                            {{ errors.body }}
+                        </p>
+
+                        <div
+                            class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <p class="text-xs leading-5 text-muted-foreground">
+                                Enter para enviar, Shift+Enter para saltar de
+                                línea.
+                            </p>
+
+                            <button
+                                type="submit"
+                                :disabled="processing"
+                                class="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-60"
+                            >
+                                <Send class="size-4" />
+                                <span>
+                                    {{ processing ? 'Enviando...' : 'Enviar' }}
+                                </span>
+                            </button>
+                        </div>
+                    </Form>
                 </div>
             </div>
         </section>
